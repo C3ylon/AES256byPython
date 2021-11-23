@@ -96,3 +96,33 @@ class Cryptor:
             self.decrypt_file(filename)
             end_time = time()
             print('[+]{} is DECRYPTED in {} seconds'.format(filename, end_time - start_time))
+
+
+if __name__ == '__main__':
+    key = input('[*]please input the key: ')
+    key = key.encode()
+    while len(key) < 32:
+        key += key
+    if len(key) > 32:
+        key = key[:32]
+    cp = Cryptor(key)
+    while 1:
+        opt = input('''1: encrypt file
+2: decrypt file
+3: encrypt directory
+4: decrypt directory
+5: eixt
+''')
+        if opt not in ('1', '2', '3', '4', '5'):
+            print('[!]input wrong command')
+            continue
+        if opt == '1':
+            cp.encrypt_file(input("[*]input file name to encrypt: "))
+        elif opt == '2':
+            cp.decrypt_file(input("[*]inout file name to decrypt: "))
+        elif opt == '3':
+            cp.encrypt_dir(print('[*]try to encrypt whole directory'))
+        elif opt == '4':
+            cp.decrypt_dir(print('[*]try to decrypt whole directory'))
+        else:
+            exit()
