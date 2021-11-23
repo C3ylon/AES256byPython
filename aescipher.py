@@ -1,6 +1,7 @@
-from os import cpu_count, remove, rename
 from Crypto.Cipher import AES
 import Crypto.Random
+from os import remove, rename
+import os
 from time import time
 
 BUFFSIZE = 1024**3
@@ -63,15 +64,35 @@ class Cryptor:
                     iv = buff[-16:]
                     buff = tmp.decrypt(buff)
                     if chunks == 0 and align:
-                        fw.write(memoryview(buff[:align - 16]))
+                        fw.write(memoryview(buff)[:align - 16])
                     else:
                         fw.write(buff)
         remove(filename)
         rename(filename + '.tmp', filename)
+    
+    def getAllFiles(self):
+        real_path = os.path.realpath(__file__)
+        script_name = os.path.basename(real_path)
+        dir_path = os.path.dirname(real_path)
+        dirs = []
+        for dirName, subdirList, fileList in os.walk(dir_path):
+            for fname in fileList:
+                if (fname != script_name):
+                    dirs.append(dirName + "\\" + fname)
+        return dirs
 
-s=time()
-cp =Cryptor(b'\x01\x02\x03\x04' * 8)
-cp.decrypt_file('test.txt')
-# cp.decrypt_file(r'D:\steam\steamapps\common\BrightMemoryInfinite\BrightMemoryInfinite\Content\Paks\BrightMemoryInfinite-WindowsNoEditor.pak')
-e=time()
-print(e-s)
+    def encrypt_dir(self):
+        dirs = self.getAllFiles()
+        for filename in dirs:
+            start_time = time()
+            self.encrypt_file(filename)
+            end_time = time()
+            print('[+]{} is ENCRYPTED in {} seconds'.format(filename, end_time - start_time))
+
+    def decrypt_dir(self):
+        dirs = self.getAllFiles()
+        for filename in dirs:
+            start_time = time()
+            self.decrypt_file(filename)
+            end_time = time()
+            print('[+]{} is DECRYPTED in {} seconds'.format(filename, end_time - start_time))
