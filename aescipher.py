@@ -1,61 +1,77 @@
+from os import cpu_count, remove, rename
 from Crypto.Cipher import AES
-from Crypto import Random
-import os
+import Crypto.Random
+from time import time
 
+BUFFSIZE = 1024**3
 
 class Cryptor:
-    __padlen = 0
     def __init__(self, key):
-        self.key = key
-    
-    def __pad(self, s):
-        mod = len(s) % AES.block_size
-        self.__padlen = AES.block_size - mod if mod else 0
-        return s + b'\x00' * self.__padlen
-    
-    def encrypt(self, s, key):
-        s = self.__pad(s)
-        iv = Random.new().read(AES.block_size)
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        return bytes([self.__padlen]) + iv + cipher.encrypt(s)
-
-    def decrypt(self, s, key):
-        self.__padlen = s[0]
-        iv = s[1 : AES.block_size + 1]
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        if self.__padlen:
-            return cipher.decrypt(s[AES.block_size + 1 : ])[ : -self.__padlen]
-        else:
-            return cipher.decrypt(s[AES.block_size + 1 : ])
-    
-    def encrypt_file(self, file_name):
-        with open(file_name, 'rb') as fp:
-            s = fp.read()
-        s = self.encrypt(s, self.key)
-        os.rename(file_name, file_name + '.tmp')
-        with open(file_name, 'wb') as fp:
-            fp.write(s)
-        os.remove(file_name + '.tmp')
-    
-    def decrypt_file(self, file_name):
-        with open(file_name, 'rb') as fp:
-            s = fp.read()
-        s = self.decrypt(s, self.key)
-        os.rename(file_name, file_name + '.tmp')
-        with open(file_name, 'wb') as fp:
-            fp.write(s)
-        os.remove(file_name + '.tmp')
-
-if __name__ == '__main__':
-    while 1:
-        key = input('input your key: ').encode()
-        
         try:
-            if len(key) != 32:
+            if type(key) != bytes or len(key) != 32:
                 raise Exception
-        except Exception:
-            print('[!]you need a 32 bytes key')
+        except:
+            print('[!]key should be 32 bytes')
+            exit(0)
         else:
-            break
-    cryptor = Cryptor(key)
-    cryptor.decrypt_file(r'./test.txt')
+            self.key = key
+    
+    def __gen_filehead(self, align):
+        return b'\xe8\xe9\x90\x90\x90\x90\xc3' + bytes([align & 0x0F | 0xC0])
+
+    def encrypt_file(self, filename):
+        with open(filename, 'rb') as fr:
+            with open(filename + '.tmp', 'wb') as fw:
+                fr.seek(0, 2)
+                sz = fr.tell()
+                fr.seek(0, 0)
+                iv = Crypto.Random.new().read(16)
+                align = sz & 0x0F
+                fw.write(self.__gen_filehead(align) + iv)
+                chunks = sz // BUFFSIZE
+                if sz % BUFFSIZE:
+                    chunks += 1
+                while chunks:
+                    chunks -= 1
+                    buff = fr.read(BUFFSIZE)
+                    if chunks == 0 and align:
+                        buff = buff + b'\x00' * (16 - align)
+                    buff = AES.new(self.key, AES.MODE_CBC, iv).encrypt(buff)
+                    fw.write(buff)
+                    iv = buff[-16:]
+        remove(filename)
+        rename(filename + '.tmp', filename)    
+
+    def decrypt_file(self, filename):
+        with open(filename, 'rb') as fr:
+            buff = fr.read(7)
+            if buff != b'\xe8\xe9\x90\x90\x90\x90\xc3':
+                return
+            with open(filename + '.tmp', 'wb') as fw:
+                align = fr.read(1)[0] & 0x0F
+                iv = fr.read(16)
+                fr.seek(0, 2)
+                sz = fr.tell() - 24
+                fr.seek(24, 0)
+                chunks = sz // BUFFSIZE
+                if sz % BUFFSIZE:
+                    chunks += 1
+                while chunks:
+                    chunks -= 1
+                    buff = fr.read(BUFFSIZE)
+                    tmp = AES.new(self.key, AES.MODE_CBC, iv)
+                    iv = buff[-16:]
+                    buff = tmp.decrypt(buff)
+                    if chunks == 0 and align:
+                        fw.write(memoryview(buff[:align - 16]))
+                    else:
+                        fw.write(buff)
+        remove(filename)
+        rename(filename + '.tmp', filename)
+
+s=time()
+cp =Cryptor(b'\x01\x02\x03\x04' * 8)
+cp.decrypt_file('test.txt')
+# cp.decrypt_file(r'D:\steam\steamapps\common\BrightMemoryInfinite\BrightMemoryInfinite\Content\Paks\BrightMemoryInfinite-WindowsNoEditor.pak')
+e=time()
+print(e-s)
