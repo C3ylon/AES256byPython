@@ -18,10 +18,13 @@ class Cryptor:
             self.key = key
     
     def __gen_filehead(self, align):
-        return b'\xe8\xe9\x90\x90\x90\x90\xc3' + bytes([align & 0x0F | 0xC0])
+        return b'\xe8\xe9\x90\x90\x90\x90\xc3' + bytes([align | 0xC0])
 
     def encrypt_file(self, filename):
         with open(filename, 'rb') as fr:
+            buff = fr.read(7)
+            if buff == b'\xe8\xe9\x90\x90\x90\x90\xc3':
+                return
             with open(filename + '.tmp', 'wb') as fw:
                 fr.seek(0, 2)
                 sz = fr.tell()
@@ -87,7 +90,7 @@ class Cryptor:
             start_time = time()
             self.encrypt_file(filename)
             end_time = time()
-            print('[+]{} is ENCRYPTED in {} seconds'.format(filename, end_time - start_time))
+            print('[+]{} is ENCRYPTED in {:.3f} seconds'.format(filename, end_time - start_time))
 
     def decrypt_dir(self):
         dirs = self.getAllFiles()
@@ -95,7 +98,7 @@ class Cryptor:
             start_time = time()
             self.decrypt_file(filename)
             end_time = time()
-            print('[+]{} is DECRYPTED in {} seconds'.format(filename, end_time - start_time))
+            print('[+]{} is DECRYPTED in {:.3f} seconds'.format(filename, end_time - start_time))
 
 
 if __name__ == '__main__':
@@ -121,8 +124,10 @@ if __name__ == '__main__':
         elif opt == '2':
             cp.decrypt_file(input("[*]inout file name to decrypt: "))
         elif opt == '3':
-            cp.encrypt_dir(print('[*]try to encrypt whole directory'))
+            print('[*]try to encrypt whole directory')
+            cp.encrypt_dir()
         elif opt == '4':
-            cp.decrypt_dir(print('[*]try to decrypt whole directory'))
+            print('[*]try to decrypt whole directory')
+            cp.decrypt_dir()
         else:
             exit()
