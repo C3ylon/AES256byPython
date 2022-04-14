@@ -103,7 +103,7 @@ class Cryptor:
 
 if __name__ == '__main__':
     key = input('[*]please input the key: ')
-    key = key.encode()
+    key = key.encode("gbk")
     while len(key) < 32:
         key += key
     if len(key) > 32:
