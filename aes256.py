@@ -1,7 +1,3 @@
-from operator import inv
-from turtle import st
-
-
 AES_BOLOCKSIZE = 16
 AES_keyExpSize = 240
 
